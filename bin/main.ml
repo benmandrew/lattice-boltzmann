@@ -62,10 +62,10 @@ let bN = BMat.roll 1 H b
 let bS = BMat.roll (-1) H b
 let bE = BMat.roll 1 V b
 let bW = BMat.roll (-1) V b
-let bNE = BMat.roll 1 H b
-let bNW = BMat.roll (-1) H b
-let bSE = BMat.roll 1 V b
-let bSW = BMat.roll (-1) V b
+let bNE = BMat.roll 1 V bN
+let bNW = BMat.roll (-1) V bN
+let bSE = BMat.roll 1 V bS
+let bSW = BMat.roll (-1) V bS
 
 type state = {
   rho : Mat.t;
@@ -141,15 +141,57 @@ let stream { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } =
   let nSW = apply_barrier nSW bSW nNE b in
   { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW }
 
+(** Steady rightward flow *)
+let create_flow { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } =
+  let nE =
+    Mat.init (fun i j ->
+        if i = 0 then
+          1. +. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.))
+        else Mat.get nE i j)
+  in
+  let nW =
+    Mat.init (fun i j ->
+        if i = 0 then
+          one9th
+          *. (1. -. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
+        else Mat.get nW i j)
+  in
+  let nNE =
+    Mat.init (fun i j ->
+        if i = 0 then
+          one36th
+          *. (1. +. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
+        else Mat.get nNE i j)
+  in
+  let nSE =
+    Mat.init (fun i j ->
+        if i = 0 then
+          one36th
+          *. (1. +. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
+        else Mat.get nSE i j)
+  in
+  let nNW =
+    Mat.init (fun i j ->
+        if i = 0 then
+          one36th
+          *. (1. -. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
+        else Mat.get nNW i j)
+  in
+  let nSW =
+    Mat.init (fun i j ->
+        if i = 0 then
+          one36th
+          *. (1. -. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
+        else Mat.get nSW i j)
+  in
+  { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW }
+
 let collide_aux n r rho omu =
   Mat.init (fun i j ->
       ((1. -. omega) *. Mat.get n i j)
       +. (omega *. r *. Mat.get rho i j *. omu i j))
 
-let collide s =
-  let { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } =
-    update_macros s
-  in
+let collide { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } =
   let ux2 = Mat.mul ux ux in
   let uy2 = Mat.mul uy uy in
   let u2 = Mat.add ux2 uy2 in
@@ -200,56 +242,14 @@ let collide s =
         +. (4.5 *. Mat.get u2 i j)
         +. (9. *. Mat.get uxuy i j))
   in
-  (* Steady rightward flow *)
-  let nE =
-    Mat.init (fun i j ->
-        if i = 0 then
-          1. +. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.))
-        else Mat.get nE i j)
-  in
-  let nW =
-    Mat.init (fun i j ->
-        if i = 0 then
-          one9th
-          *. (1. -. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
-        else Mat.get nW i j)
-  in
-  let nNE =
-    Mat.init (fun i j ->
-        if i = 0 then
-          one36th
-          *. (1. +. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
-        else Mat.get nNE i j)
-  in
-  let nSE =
-    Mat.init (fun i j ->
-        if i = 0 then
-          one36th
-          *. (1. +. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
-        else Mat.get nSE i j)
-  in
-  let nNW =
-    Mat.init (fun i j ->
-        if i = 0 then
-          one36th
-          *. (1. -. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
-        else Mat.get nNW i j)
-  in
-  let nSW =
-    Mat.init (fun i j ->
-        if i = 0 then
-          one36th
-          *. (1. -. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
-        else Mat.get nSW i j)
-  in
-  { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW }
+  create_flow { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW }
 
 let curl ux uy =
   let a = Mat.(add (roll (-1) V uy) (roll 1 V uy)) in
   let b = Mat.(add (roll (-1) H ux) (roll 1 H ux)) in
   Mat.sub a b
 
-let next_frame s = collide @@ stream s
+let next_frame s = collide @@ stream @@ update_macros s
 
 module G = Graphics
 

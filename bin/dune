@@ -1,0 +1,4 @@
+(executable
+ (public_name lattice_boltzmann)
+ (name main)
+ (libraries lattice_boltzmann))

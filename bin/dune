@@ -1,4 +1,4 @@
 (executable
- (public_name lattice_boltzmann)
+ (public_name lattice-boltzmann)
  (name main)
- (libraries lattice_boltzmann))
+ (libraries lattice_boltzmann lacaml graphics unix))

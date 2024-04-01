@@ -30,9 +30,7 @@ module Make (V : V) (D : D) = struct
     in
     init f
 
-  let fold f =
-    Array.fold_left (Array.fold_left (fun acc v ->
-      f acc v))
+  let fold f = Array.fold_left (Array.fold_left (fun acc v -> f acc v))
 end
 
 module FMake (D : D) = struct

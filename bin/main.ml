@@ -1,8 +1,8 @@
 open Lattice_boltzmann
 
-let render_scale = 8
-let height = 80
-let width = 200
+let render_scale = 16
+let height = 40
+let width = 100
 
 module D = struct
   let width = width
@@ -18,7 +18,7 @@ let viscosity = 0.02
 let omega = 1. /. ((3. *. viscosity) +. 0.5)
 
 (** Initial and in-flow speed *)
-let u0 = 0.1
+let u0 = -.0.1
 
 let four9ths = 4. /. 9.
 let one9th = 1. /. 9.
@@ -47,8 +47,7 @@ let nSW =
 
 let apply_barrier l lb r rb =
   Mat.init (fun i j ->
-      (* if BMat.get lb i j && BMat.get rb i j then Mat.get r i j *)
-      if BMat.get lb i j then Mat.get r i j
+      if BMat.get lb i j && BMat.get rb i j then Mat.get r i j
       else Mat.get l i j)
 
 (** Barrier *)
@@ -251,7 +250,7 @@ let curl ux uy =
   let b = Mat.(add (roll 1 V uy) (roll (-1) H ux)) in
   Mat.sub a b
 
-let next_frame s = stream @@ update_macroscopics s
+let next_frame s = collide @@ update_macroscopics @@ stream s
 
 module G = Graphics
 
@@ -259,7 +258,10 @@ let exit_handler status =
   if status.G.keypressed && status.key == ' ' then raise Exit else ()
 
 let discretise scale m =
-  let f x = let x = 8. *. x in x /. (x +. 1.) in
+  let f x =
+    let x = 8. *. x in
+    x /. (x +. 1.)
+  in
   let lum =
     Array.init height (fun j ->
         Array.init width (fun i ->
@@ -277,12 +279,14 @@ let rec loop s =
   let c = curl s.ux s.uy in
   G.draw_image (G.make_image @@ discretise render_scale c) 0 0;
   let () =
-    let sum = Mat.fold (+.) 0. s.rho in
+    let sum = Mat.fold ( +. ) 0. s.rho in
     let n = float_of_int (width * height) in
     let mean = sum /. n in
-    let variance = (Mat.fold (fun acc x -> acc +. (x -. mean)**2.) 0. c) /. n in
+    let variance =
+      Mat.fold (fun acc x -> acc +. ((x -. mean) ** 2.)) 0. c /. n
+    in
     Printf.printf "VAR(curl) = %f\n" variance;
-    flush stdout;
+    flush stdout
   in
   loop @@ next_frame s
 

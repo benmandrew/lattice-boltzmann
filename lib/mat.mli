@@ -18,8 +18,9 @@ module FMake : functor (_ : D) -> sig
 
   type dir = H | V
 
-  val modulo : int -> int -> int
+  (* val modulo : int -> int -> int *)
   val roll : int -> dir -> t -> t
+  val fold : (float -> float -> float) -> float -> t -> float
 end
 
 module BMake : functor (_ : D) -> sig
@@ -32,6 +33,7 @@ module BMake : functor (_ : D) -> sig
 
   type dir = H | V
 
-  val modulo : int -> int -> int
+  (* val modulo : int -> int -> int *)
   val roll : int -> dir -> t -> t
+  val fold : (bool -> bool -> bool) -> bool -> t -> bool
 end

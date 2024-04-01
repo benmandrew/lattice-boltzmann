@@ -34,20 +34,21 @@ let nW =
   Mat.init (fun _ _ -> one9th *. (1. -. (3. *. u0) +. (3. *. (u0 ** 2.))))
 
 let nNE =
-  Mat.init (fun _ _ -> one9th *. (1. +. (3. *. u0) +. (3. *. (u0 ** 2.))))
+  Mat.init (fun _ _ -> one36th *. (1. +. (3. *. u0) +. (3. *. (u0 ** 2.))))
 
 let nSE =
-  Mat.init (fun _ _ -> one9th *. (1. +. (3. *. u0) +. (3. *. (u0 ** 2.))))
+  Mat.init (fun _ _ -> one36th *. (1. +. (3. *. u0) +. (3. *. (u0 ** 2.))))
 
 let nNW =
-  Mat.init (fun _ _ -> one9th *. (1. -. (3. *. u0) +. (3. *. (u0 ** 2.))))
+  Mat.init (fun _ _ -> one36th *. (1. -. (3. *. u0) +. (3. *. (u0 ** 2.))))
 
 let nSW =
-  Mat.init (fun _ _ -> one9th *. (1. -. (3. *. u0) +. (3. *. (u0 ** 2.))))
+  Mat.init (fun _ _ -> one36th *. (1. -. (3. *. u0) +. (3. *. (u0 ** 2.))))
 
 let apply_barrier l lb r rb =
   Mat.init (fun i j ->
-      if BMat.get lb i j && BMat.get rb i j then Mat.get r i j
+      (* if BMat.get lb i j && BMat.get rb i j then Mat.get r i j *)
+      if BMat.get lb i j then Mat.get r i j
       else Mat.get l i j)
 
 (** Barrier *)
@@ -58,14 +59,14 @@ let b =
       && j <= (height / 2) + 12
       && j >= (height / 2) - 12)
 
-let bN = BMat.roll 1 H b
-let bS = BMat.roll (-1) H b
-let bE = BMat.roll 1 V b
-let bW = BMat.roll (-1) V b
-let bNE = BMat.roll 1 V bN
-let bNW = BMat.roll (-1) V bN
-let bSE = BMat.roll 1 V bS
-let bSW = BMat.roll (-1) V bS
+let bN = BMat.roll 1 V b
+let bS = BMat.roll (-1) V b
+let bE = BMat.roll 1 H b
+let bW = BMat.roll (-1) H b
+let bNE = BMat.roll 1 H bN
+let bNW = BMat.roll (-1) H bN
+let bSE = BMat.roll 1 H bS
+let bSW = BMat.roll (-1) H bS
 
 type state = {
   rho : Mat.t;
@@ -96,41 +97,40 @@ let get_uy { rho; nN; nS; nNE; nSE; nNW; nSW; _ } =
   let b = Mat.adds [ nS; nSE; nSW ] in
   Mat.(div (sub a b) rho)
 
-let update_macros s =
+let update_macroscopics s =
   let s = { s with rho = get_rho s } in
   let s = { s with ux = get_ux s } in
   { s with uy = get_uy s }
 
 let state =
-  update_macros
-    {
-      rho = Mat.zero;
-      ux = Mat.zero;
-      uy = Mat.zero;
-      n0;
-      nN;
-      nS;
-      nE;
-      nW;
-      nNE;
-      nSE;
-      nNW;
-      nSW;
-    }
+  {
+    rho = Mat.zero;
+    ux = Mat.zero;
+    uy = Mat.zero;
+    n0;
+    nN;
+    nS;
+    nE;
+    nW;
+    nNE;
+    nSE;
+    nNW;
+    nSW;
+  }
 
 let stream { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } =
-  let nN = Mat.(roll 1 H nN) in
-  let nNE = Mat.(roll 1 H nNE) in
-  let nNW = Mat.(roll 1 H nNW) in
-  let nS = Mat.(roll (-1) H nS) in
-  let nSE = Mat.(roll (-1) H nSE) in
-  let nSW = Mat.(roll (-1) H nSW) in
-  let nE = Mat.(roll 1 V nE) in
+  let nN = Mat.(roll 1 V nN) in
   let nNE = Mat.(roll 1 V nNE) in
-  let nSE = Mat.(roll 1 V nSE) in
-  let nW = Mat.(roll (-1) V nW) in
-  let nNW = Mat.(roll (-1) V nNW) in
+  let nNW = Mat.(roll 1 V nNW) in
+  let nS = Mat.(roll (-1) V nS) in
+  let nSE = Mat.(roll (-1) V nSE) in
   let nSW = Mat.(roll (-1) V nSW) in
+  let nE = Mat.(roll 1 H nE) in
+  let nNE = Mat.(roll 1 H nNE) in
+  let nSE = Mat.(roll 1 H nSE) in
+  let nW = Mat.(roll (-1) H nW) in
+  let nNW = Mat.(roll (-1) H nNW) in
+  let nSW = Mat.(roll (-1) H nSW) in
   let nN = apply_barrier nN bN nS b in
   let nS = apply_barrier nS bS nN b in
   let nE = apply_barrier nE bE nW b in
@@ -146,7 +146,8 @@ let create_flow { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } =
   let nE =
     Mat.init (fun i j ->
         if i = 0 then
-          1. +. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.))
+          one9th
+          *. (1. +. (3. *. u0) +. (4.5 *. (u0 ** 2.)) -. (1.5 *. (u0 ** 2.)))
         else Mat.get nE i j)
   in
   let nW =
@@ -243,13 +244,14 @@ let collide { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } =
         +. (9. *. Mat.get uxuy i j))
   in
   create_flow { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW }
+  (* { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } *)
 
 let curl ux uy =
-  let a = Mat.(add (roll (-1) V uy) (roll 1 V uy)) in
-  let b = Mat.(add (roll (-1) H ux) (roll 1 H ux)) in
+  let a = Mat.(add (roll (-1) V uy) (roll 1 H ux)) in
+  let b = Mat.(add (roll 1 V uy) (roll (-1) H ux)) in
   Mat.sub a b
 
-let next_frame s = collide @@ stream @@ update_macros s
+let next_frame s = stream @@ update_macroscopics s
 
 module G = Graphics
 
@@ -257,10 +259,11 @@ let exit_handler status =
   if status.G.keypressed && status.key == ' ' then raise Exit else ()
 
 let discretise scale m =
+  let f x = let x = 8. *. x in x /. (x +. 1.) in
   let lum =
     Array.init height (fun j ->
         Array.init width (fun i ->
-            int_of_float @@ Float.mul 255. @@ Mat.get m i j))
+            int_of_float @@ Float.mul 255. @@ f @@ Mat.get m i j))
   in
   Array.init (height * scale) (fun j ->
       let j' = j / scale in
@@ -271,7 +274,16 @@ let discretise scale m =
           if lum >= 0 then G.rgb lum 0 barrier else G.rgb 0 (abs lum) barrier))
 
 let rec loop s =
-  G.draw_image (G.make_image @@ discretise render_scale @@ curl s.ux s.uy) 0 0;
+  let c = curl s.ux s.uy in
+  G.draw_image (G.make_image @@ discretise render_scale c) 0 0;
+  let () =
+    let sum = Mat.fold (+.) 0. s.rho in
+    let n = float_of_int (width * height) in
+    let mean = sum /. n in
+    let variance = (Mat.fold (fun acc x -> acc +. (x -. mean)**2.) 0. c) /. n in
+    Printf.printf "VAR(curl) = %f\n" variance;
+    flush stdout;
+  in
   loop @@ next_frame s
 
 let () =

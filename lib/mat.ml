@@ -29,6 +29,10 @@ module Make (V : V) (D : D) = struct
       | V -> get m i (modulo (j + n) D.height)
     in
     init f
+
+  let fold f =
+    Array.fold_left (Array.fold_left (fun acc v ->
+      f acc v))
 end
 
 module FMake (D : D) = struct

@@ -269,9 +269,9 @@ let discretise scale m =
       let j' = j / scale in
       Array.init (width * scale) (fun i ->
           let i' = i / scale in
-          let barrier = if BMat.get b i' j' then 120 else 0 in
+          (* let barrier = if BMat.get b i' j' then 120 else 0 in *)
           let lum = Array.get (Array.get lum j') i' in
-          if lum >= 0 then G.rgb lum 0 barrier else G.rgb 0 (abs lum) barrier))
+          if lum >= 0 then G.rgb lum 0 0 else G.rgb 0 (abs lum) 0))
 
 let rec loop s =
   let c = curl s.ux s.uy in

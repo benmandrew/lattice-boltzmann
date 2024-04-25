@@ -2,14 +2,9 @@ module type V = sig
   type t
 end
 
-module type D = sig
-  val width : int
-  val height : int
-end
-
 module A = Array
 
-module Make (V : V) (D : D) = struct
+module Make (V : V) (D : S.D) = struct
   type t = V.t array array
 
   let init v = A.init D.height (fun j -> A.init D.width (fun i -> v i j))
@@ -33,7 +28,7 @@ module Make (V : V) (D : D) = struct
   let fold f = A.fold_left (A.fold_left (fun acc v -> f acc v))
 end
 
-module FMake (D : D) = struct
+module FMake (D : S.D) = struct
   include Make (Float) (D)
 
   let zero = init (fun _ _ -> 0.)
@@ -44,7 +39,7 @@ module FMake (D : D) = struct
   let adds = List.fold_left (fun acc m -> add acc m) zero
 end
 
-module BMake (D : D) = struct
+module BMake (D : S.D) = struct
   include Make (Bool) (D)
 
   let zero = init (fun _ _ -> false)

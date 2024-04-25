@@ -1,9 +1,4 @@
-module type D = sig
-  val width : int
-  val height : int
-end
-
-module FMake : functor (_ : D) -> sig
+module FMake : functor (_ : S.D) -> sig
   type t
 
   val init : (int -> int -> float) -> t
@@ -23,7 +18,7 @@ module FMake : functor (_ : D) -> sig
   val fold : (float -> float -> float) -> float -> t -> float
 end
 
-module BMake : functor (_ : D) -> sig
+module BMake : functor (_ : S.D) -> sig
   type t
 
   val init : (int -> int -> bool) -> t

@@ -7,14 +7,14 @@ module type D = sig
   val height : int
 end
 
+module A = Array
+
 module Make (V : V) (D : D) = struct
   type t = V.t array array
 
-  let init v =
-    Array.init D.height (fun j -> Array.init D.width (fun i -> v i j))
-
-  let get m i j = Array.(get (get m j) i)
-  let op f = Array.map2 (fun a b -> Array.map2 (fun a b -> f a b) a b)
+  let init v = A.init D.height (fun j -> A.init D.width (fun i -> v i j))
+  let get m i j = A.(get (get m j) i)
+  let op f = A.map2 (fun a b -> A.map2 (fun a b -> f a b) a b)
 
   type dir = H | V
 
@@ -30,7 +30,7 @@ module Make (V : V) (D : D) = struct
     in
     init f
 
-  let fold f = Array.fold_left (Array.fold_left (fun acc v -> f acc v))
+  let fold f = A.fold_left (A.fold_left (fun acc v -> f acc v))
 end
 
 module FMake (D : D) = struct

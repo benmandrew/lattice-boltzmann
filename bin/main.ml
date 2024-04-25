@@ -18,7 +18,7 @@ let viscosity = 0.02
 let omega = 1. /. ((3. *. viscosity) +. 0.5)
 
 (** Initial and in-flow speed *)
-let u0 = -.0.1
+let u0 = -0.1
 
 let four9ths = 4. /. 9.
 let one9th = 1. /. 9.
@@ -243,7 +243,7 @@ let collide { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } =
         +. (9. *. Mat.get uxuy i j))
   in
   create_flow { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW }
-  (* { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } *)
+(* { rho; ux; uy; n0; nN; nS; nE; nW; nNE; nSE; nNW; nSW } *)
 
 let curl ux uy =
   let a = Mat.(add (roll (-1) V uy) (roll 1 H ux)) in
@@ -253,6 +253,7 @@ let curl ux uy =
 let next_frame s = collide @@ update_macroscopics @@ stream s
 
 module G = Graphics
+module A = Array
 
 let exit_handler status =
   if status.G.keypressed && status.key == ' ' then raise Exit else ()
@@ -260,39 +261,39 @@ let exit_handler status =
 let discretise scale m =
   let f x =
     let x = 8. *. x in
-    x /. (x +. 1.)
+    if x < 0. then -.x /. (x -. 1.) else x /. (x +. 1.)
   in
   let lum =
-    Array.init height (fun j ->
-        Array.init width (fun i ->
+    A.init height (fun j ->
+        A.init width (fun i ->
             int_of_float @@ Float.mul 255. @@ f @@ Mat.get m i j))
   in
-  Array.init (height * scale) (fun j ->
+  A.init (height * scale) (fun j ->
       let j' = j / scale in
-      Array.init (width * scale) (fun i ->
+      A.init (width * scale) (fun i ->
           let i' = i / scale in
           let barrier = if BMat.get b i' j' then 120 else 0 in
-          let lum = Array.get (Array.get lum j') i' in
+          let lum = A.get (A.get lum j') i' in
           if lum >= 0 then G.rgb lum 0 barrier else G.rgb 0 (abs lum) barrier))
 
-let rec loop s =
+let print_variance i s c =
+  let sum = Mat.fold ( +. ) 0. s.rho in
+  let n = float_of_int (width * height) in
+  let mean = sum /. n in
+  let variance = Mat.fold (fun acc x -> acc +. ((x -. mean) ** 2.)) 0. c /. n in
+  Printf.printf "\rframe %d - VAR(curl) = %f" i variance
+
+let rec loop i s =
   let c = curl s.ux s.uy in
   G.draw_image (G.make_image @@ discretise render_scale c) 0 0;
-  let () =
-    let sum = Mat.fold ( +. ) 0. s.rho in
-    let n = float_of_int (width * height) in
-    let mean = sum /. n in
-    let variance =
-      Mat.fold (fun acc x -> acc +. ((x -. mean) ** 2.)) 0. c /. n
-    in
-    Printf.printf "VAR(curl) = %f\n" variance;
-    flush stdout
-  in
-  loop @@ next_frame s
+  if i mod 10 == 0 then (
+    print_variance i s c;
+    flush stdout);
+  loop (i + 1) @@ next_frame s
 
 let () =
   ignore (state, stream, collide, curl, discretise, exit_handler);
   G.open_graph "";
   G.resize_window (width * render_scale) (height * render_scale);
-  loop state
+  loop 0 state
 (* G.loop_at_exit [ Key_pressed ] exit_handler *)
